@@ -1,0 +1,12 @@
+# Ignorar el entorno virtual (es pesadísimo y cada quien crea el suyo)
+env/
+venv/
+
+# Ignorar archivos de caché de Python
+__pycache__/
+*.pyc
+
+# ¡SÚPER IMPORTANTE! Ignorar las bases de datos biométricas por privacidad
+*.pkl
+shogun_db.pkl
+shogun_invalidos.pkl
