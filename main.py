@@ -5,12 +5,32 @@ import numpy as np
 import time
 from deepface import DeepFace
 from datetime import datetime
-import tkinter as tk
-from tkinter import simpledialog
+import customtkinter as ctk
+import pyttsx3
+import customtkinter as ctk
+import pyttsx3
+import threading 
 
-# Ocultamos la ventana principal de tkinter para usar solo los popups
-ROOT = tk.Tk()
-ROOT.withdraw()
+# --- Configuración de la Voz de Shogun AI ---
+# --- Función Multihilo para la Voz de Shogun AI ---
+def hablar(texto):
+    def tarea_voz():
+        motor = pyttsx3.init()
+        motor.setProperty('rate', 150)
+        motor.say(texto)
+        motor.runAndWait()
+    # Ejecuta la voz en el fondo sin pausar el video
+    threading.Thread(target=tarea_voz).start()
+# --------------------------------------------------
+# --------------------------------------------
+
+# --- Configuración Visual de CustomTkinter ---
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")
+
+# Truco para que la ventana oscura conviva bien con OpenCV
+app = ctk.CTk()
+app.withdraw()
 
 # --- 1. Inicializar Bases de Datos ---
 archivo_db = "shogun_db.pkl"
@@ -42,38 +62,46 @@ def evaluar_calidad(rostro):
         return False, f"Exceso de luz/Saturado (Brillo: {brillo_promedio:.1f})"
     return True, "Calidad óptima"
 
-# --- 3. Inicializar Cámara y Variables ---
+# --- 3. Inicializar Cámara ---
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-# Recuerda poner la IP de tu DroidCam aquí:
-cap = cv2.VideoCapture('http://192.168.x.x:4747/video') 
 
-# Variables para calcular FPS
+print("\nEncendiendo cámara... (el foquito debería prender)")
+# 🔥 HACK DE WINDOWS: cv2.CAP_DSHOW fuerza a que la ventana abra al instante
+#cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+url_camara = "http://192.168.3.10:4747/video"
+cap = cv2.VideoCapture(url_camara) 
+
 tiempo_anterior = 0
-
-print("\n--- CONTROLES SHOGUN AI ---")
-print("[r] - Registrar rostro nuevo")
-print("[i] - Identificar rostro")
-print("[q] - Salir")
 
 print("\nCalentando motores de la IA... (esto tomará unos segundos)")
 try:
-    # Creamos una imagen falsa (negra) de 224x224 píxeles
     dummy_img = np.zeros((224, 224, 3), dtype=np.uint8)
     DeepFace.represent(img_path=dummy_img, model_name="Facenet", enforce_detection=False)
     print("¡IA lista y cargada en la memoria RAM!")
 except Exception as e:
     pass
 
-while cap.isOpened():
+print("\n--- CONTROLES SHOGUN AI ---")
+print("[r] - Registrar rostro nuevo")
+print("[i] - Identificar rostro")
+print("[q] - Salir")
+
+# --- 🟢 CICLO PRINCIPAL INMORTAL ---
+while True:
     success, image = cap.read()
-    if not success: continue
+    
+    if not success: 
+        print("🛑 ¡No encuentro la cámara! Reconectando...")
+        time.sleep(2) 
+        #cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(url_camara)
+        continue
 
     # --- Cálculo de FPS en tiempo real ---
     tiempo_actual = time.time()
     fps = 1 / (tiempo_actual - tiempo_anterior) if tiempo_anterior > 0 else 0
     tiempo_anterior = tiempo_actual
     
-    # Dibujar los FPS en la esquina del video
     cv2.putText(image, f"FPS: {int(fps)}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -84,7 +112,7 @@ while cap.isOpened():
     
     # --- Alerta de Rostro No Detectado ---
     if len(faces) == 0 and tecla in [ord('r'), ord('i')]:
-        print("\n[ALERTA] ¡No veo ningún rostro! Quédate quieto o mejora la iluminación bro. :3")
+        print("\n[ALERTA] ¡No veo ningún rostro! Quédate quieto.")
 
     for (x, y, w, h) in faces:
         cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
@@ -95,35 +123,45 @@ while cap.isOpened():
             es_valido, mensaje_calidad = evaluar_calidad(rostro_recortado)
             if not es_valido:
                 print(f"\n[ALERTA] Registro denegado: {mensaje_calidad}")
-                registro_fallido = {"fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "motivo": mensaje_calidad}
-                lista_invalidos.append(registro_fallido)
-                with open(archivo_invalidos, "wb") as f: pickle.dump(lista_invalidos, f)
                 continue
                 
             print(f"\n[OK] {mensaje_calidad}. Procesando IA para registro...")
             try:
-                # Iniciamos cronómetro de la IA
                 inicio_ia = time.time()
                 resultado = DeepFace.represent(img_path=rostro_recortado, model_name="Facenet", enforce_detection=False)
                 fin_ia = time.time()
                 
                 embedding = np.array(resultado[0]["embedding"])
                 
-                # Generamos un nombre automático en vez de usar input()
-                nuevo_id = len(base_de_datos) + 1
-                # Abre una ventanita gráfica para escribir el nombre
-                nombre = simpledialog.askstring("Registro Shogun AI", "Ingresa el nombre del rostro:")
+                # --- DESCONECTAMOS LA CÁMARA PARA QUE TKINTER NO SE TRABE ---
+                cap.release()
                 
-                # Si el usuario escribió un nombre y le dio OK:
+                dialog = ctk.CTkInputDialog(
+                    text="🧬 BIOMETRÍA REQUERIDA\n\nIngresa el nombre del nuevo rostro:", 
+                    title="Shogun AI - Consola de Registro"
+                )
+                nombre = dialog.get_input()
+                
                 if nombre:
                     base_de_datos[nombre] = embedding
                     with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
                     print(f"¡{nombre} guardado en la BD! (Tiempo: {fin_ia - inicio_ia:.2f}s)")
+
+                    # --- SHOGUN AI HABLA ---
+                    hablar(f"Biometría registrada con éxito. Bienvenido a Shogun AI, {nombre}.")
+
                 else:
-                    print("Registro cancelado (no se ingresó nombre).")
-                # --------------------------
+                    print("Registro cancelado.")
+
+                # --- VOLVEMOS A CONECTAR LA CÁMARA ---
+                #cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                cap = cv2.VideoCapture(url_camara)
+                
             except Exception as e: 
                 print(f"Error al procesar el rostro: {e}")
+                #cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Por si explota, reconectamos
+                cap = cv2.VideoCapture(url_camara)
+
         # --- Módulo de Identificación ---
         elif tecla == ord('i'):
             print("\nBuscando coincidencias...")
@@ -131,7 +169,6 @@ while cap.isOpened():
                 print("La base de datos está vacía. Registra a alguien primero con 'r'.")
                 continue
             try:
-                # Iniciamos cronómetro de respuesta
                 inicio_ia = time.time()
                 resultado = DeepFace.represent(img_path=rostro_recortado, model_name="Facenet", enforce_detection=False)
                 embedding_actual = np.array(resultado[0]["embedding"])
@@ -151,9 +188,12 @@ while cap.isOpened():
                 umbral = 10.0 
                 if mejor_similitud < umbral:
                     print(f"¡IDENTIFICADO! Eres: {identidad} (Distancia: {mejor_similitud:.2f}) | Tiempo: {tiempo_respuesta:.2f}s")
+                    hablar(f"Acceso autorizado. Hola, {identidad}.")
                 else:
                     print(f"ROSTRO DESCONOCIDO (Distancia más cercana: {mejor_similitud:.2f}) | Tiempo: {tiempo_respuesta:.2f}s")
-            except Exception as e: print(f"Error al identificar: {e}")
+                    hablar("Acceso denegado. Rostro desconocido.")
+            except Exception as e: 
+                print(f"Error al identificar: {e}")
 
     cv2.imshow('Shogun AI', image)
     if tecla == ord('q'): break
