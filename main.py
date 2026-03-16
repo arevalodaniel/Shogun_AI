@@ -111,6 +111,34 @@ while True:
     # Leemos la tecla presionada en cada frame
     tecla = cv2.waitKey(1) & 0xFF
     
+    # --- 🗑️ MÓDULO DE BAJAS INDEPENDIENTE (No necesita rostro) ---
+    if tecla == ord('b'):
+        print("\nIniciando protocolo de borrado...")
+        cap.release()
+        
+        dialog = ctk.CTkInputDialog(
+            text="🗑️ ELIMINAR REGISTRO\n\nIngresa el nombre exacto del usuario a borrar:", 
+            title="Shogun AI - Consola de Bajas"
+        )
+        nombre_borrar = dialog.get_input()
+        
+        if nombre_borrar:
+            if nombre_borrar in base_de_datos:
+                del base_de_datos[nombre_borrar]
+                with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
+                print(f"[-] Usuario '{nombre_borrar}' eliminado de la base de datos.")
+                hablar(f"Usuario {nombre_borrar} eliminado del sistema.")
+            else:
+                print(f"[ERROR] El usuario '{nombre_borrar}' no existe.")
+                hablar("Error. Usuario no encontrado en la base de datos.")
+        else:
+            print("Operación de borrado cancelada.")
+
+        # VOLVEMOS A CONECTAR LA CÁMARA
+        cap = cv2.VideoCapture(url_camara) 
+        continue # Brincamos al siguiente frame para que no marque errores
+    # --------------------------------------------------------------
+
     # --- Alerta de Rostro No Detectado ---
     if len(faces) == 0 and tecla in [ord('r'), ord('i')]:
         print("\n[ALERTA] ¡No veo ningún rostro! Quédate quieto.")
@@ -195,36 +223,6 @@ while True:
                     hablar("Acceso denegado. Rostro desconocido.")
             except Exception as e: 
                 print(f"Error al identificar: {e}")
-                
-        # --- Módulo de Bajas (Borrar usuario) ---
-        elif tecla == ord('b'):
-            print("\nIniciando protocolo de borrado...")
-            # --- DESCONECTAMOS LA CÁMARA PARA QUE TKINTER NO SE TRABE ---
-            cap.release()
-            
-            dialog = ctk.CTkInputDialog(
-                text="🗑️ ELIMINAR REGISTRO\n\nIngresa el nombre exacto del usuario a borrar:", 
-                title="Shogun AI - Consola de Bajas"
-            )
-            nombre_borrar = dialog.get_input()
-            
-            if nombre_borrar:
-                # Verificamos si el usuario existe en el diccionario
-                if nombre_borrar in base_de_datos:
-                    del base_de_datos[nombre_borrar] # Lo borramos de la RAM
-                    with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f) # Guardamos los cambios
-                    
-                    print(f"[-] Usuario '{nombre_borrar}' eliminado de la base de datos.")
-                    hablar(f"Usuario {nombre_borrar} eliminado del sistema.")
-                else:
-                    print(f"[ERROR] El usuario '{nombre_borrar}' no existe.")
-                    hablar("Error. Usuario no encontrado en la base de datos.")
-            else:
-                print("Operación de borrado cancelada.")
-
-            # --- VOLVEMOS A CONECTAR LA CÁMARA ---
-            cap = cv2.VideoCapture(url_camara) 
-            # ----------------------------------------
 
     cv2.imshow('Shogun AI', image)
     if tecla == ord('q'): break
