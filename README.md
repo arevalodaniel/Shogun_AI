@@ -27,16 +27,20 @@ Para garantizar la estabilidad del sistema y evitar conflictos de compatibilidad
    git clone [https://github.com/TU_USUARIO/shogun-ai.git](https://github.com/TU_USUARIO/shogun-ai.git)
    cd shogun-ai
 2. **Crear y activar entorno virtual (Recomendado):**
-python -m venv env
-# En Windows:
-env\Scripts\activate
+    python -m venv env
+    # En Windows:
+    env\Scripts\activate
+
 3. **Instalar dependencias blindadas:**
-pip install -r requirements.txt
+    pip install -r requirements.txt
+
 4. **Generar la Base de Datos de Prueba (Stress Test):
-(Por motivos de seguridad y optimización de almacenamiento en el repositorio, la base de datos no se incluye. Debes generarla localmente).**
-python generador_dummies.py
+    (Por motivos de seguridad y optimización de almacenamiento en el repositorio, la base de datos no se incluye. Debes generarla localmente).**
+    python generador_dummies.py
+
 5. **Ejecutar el sistema:** 
-python main.py
+    python main.py
+
 🎮 Controles del Sistema
 
     r : Registrar rostro nuevo (Inicia el protocolo de extracción biométrica. Requiere validación de vitalidad obligatoria).
