@@ -1,13 +1,20 @@
-# Visión Artificial y Procesamiento de Imágenes
-opencv-python>=4.8.0
-numpy>=1.24.0
+# --- MOTOR DE INTELIGENCIA ARTIFICIAL (VERSIÓN BLINDADA) ---
+tensorflow==2.15.0
+keras==2.15.0
+tf-keras==2.15.0
+protobuf<4
+ml-dtypes==0.2.0
 
-# Inteligencia Artificial y Deep Learning
-deepface>=0.0.79
-tensorflow>=2.13.0
+# --- RECONOCIMIENTO FACIAL ---
+deepface
 
-# Interfaz Gráfica Moderna
-customtkinter>=5.2.0
+# --- ANTI-SPOOFING Y VITALIDAD ---
+mediapipe==0.10.5
 
-# Síntesis de Voz (Text-to-Speech)
-pyttsx3>=2.90
+# --- VISIÓN POR COMPUTADORA ---
+opencv-python==4.9.0.80
+opencv-contrib-python==4.9.0.80
+
+# --- INTERFAZ GRÁFICA Y VOZ ---
+customtkinter
+pyttsx3

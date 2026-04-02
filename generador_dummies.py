@@ -1,33 +1,31 @@
 import pickle
+import os
 import numpy as np
 
 archivo_db = "shogun_db.pkl"
 
-# 1. Cargamos tu base de datos actual 
-try:
+# 1. Intentamos cargar la base de datos actual para NO borrar lo que ya hiciste
+if os.path.exists(archivo_db):
     with open(archivo_db, "rb") as f:
         base_de_datos = pickle.load(f)
-    print(f"Base de datos original cargada con {len(base_de_datos)} rostros.")
-except FileNotFoundError:
-    print("No se encontró la base de datos. ¡Corre tu main.py y regístrate primero!")
-    exit()
+    print(f"--- Base de datos encontrada con {len(base_de_datos)} registros reales ---")
+else:
+    base_de_datos = {}
+    print("--- Creando base de datos nueva desde cero ---")
 
-# 2. Obtenemos el tamaño exacto del vector
-primer_registro = list(base_de_datos.values())[0]
-dimensiones = len(primer_registro)
+# 2. Generar 10,000 usuarios sintéticos cuidando no duplicar
+print("Generando 10,000 perfiles de estrés... por favor espera.")
+for i in range(10000):
+    nombre_bot = f"Sintetico_{i}"
+    # Solo lo agregamos si no existe (por si corres el script varias veces)
+    if nombre_bot not in base_de_datos:
+        # Vector de 128 dimensiones con ruido aleatorio
+        # El +50.0 es tu firma de seguridad para que no se parezcan a humanos
+        base_de_datos[nombre_bot] = np.random.rand(128) + 50.0
 
-print(f"\nInyectando esteroides nivel Dios... Generando 10,000 sujetos de prueba...")
-
-# 3. Inyectamos 10,000 perfiles falsos 
-for i in range(1, 10001):
-    # Les pongo una 'X' en el nombre para no sobreescribir los 1,000 que ya tenía si es que no borre el archivo
-    nombre_falso = f"Sujeto_Prueba_X_{i}" 
-    vector_falso = np.random.uniform(low=-5.0, high=5.0, size=(dimensiones,))
-    base_de_datos[nombre_falso] = vector_falso
-
-# 4. Guardamos la nueva mega base de datos
+# 3. Guardamos la mezcla de registros reales + dummies
 with open(archivo_db, "wb") as f:
     pickle.dump(base_de_datos, f)
 
-print(f"\n¡BOOM! 💥 El archivo 'shogun_db.pkl' acaba de engordar. Ahora tienes {len(base_de_datos)} registros.")
-print("¡Listo para hacer sudar a ese procesador! :3")
+print(f"¡Éxito! Ahora tienes un total de {len(base_de_datos)} registros.")
+print("Tus registros reales están a salvo junto con los 10,000 bots.")

@@ -1,25 +1,19 @@
-# Ignorar el entorno virtual (es pesadísimo y cada quien crea el suyo)
+# --- ENTORNOS VIRTUALES ---
 env/
 venv/
+ENV/
 
-# Ignorar archivos de caché de Python
+# --- CACHÉ DE PYTHON ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# ¡SÚPER IMPORTANTE! Ignorar las bases de datos biométricas por privacidad
-*.pkl
+# --- BASES DE DATOS BIOMÉTRICAS ---
+# Ignoramos los archivos pickle por peso y seguridad de los datos
 shogun_db.pkl
 shogun_invalidos.pkl
 
-# --- AGREGADOS NINJA ---
-
-# Ignorar archivos ocultos de configuración de tu editor de código (VS Code, etc.)
-.vscode/
-.idea/
-
-# Ignorar la basura visual que genera el sistema operativo
+# --- ARCHIVOS DE SISTEMA ---
+.DS_Store
 Thumbs.db
-Desktop.ini
-
-# Ignorar variables de entorno (por si en el futuro le metes contraseñas o APIs)
-.env

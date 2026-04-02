@@ -1,46 +1,50 @@
-# 🥷 Shogun AI - Sistema Biométrico Facial de Grado Industrial
+# 🛡️ Shogun AI v2.0 - Advanced Biometric Recognition System
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![OpenCV](https://img.shields.io/badge/OpenCV-4.x-green.svg)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange.svg)
-![DeepFace](https://img.shields.io/badge/DeepFace-Facenet-red.svg)
-
-**Shogun AI** es un sistema avanzado de reconocimiento facial diseñado para entornos de control de acceso y seguridad perimetral. Utiliza modelos de Deep Learning (*Facenet*) para extraer embeddings faciales y calcular distancias euclidianas en tiempo real, logrando tiempos de respuesta de **~0.40 segundos**.
+Sistema de reconocimiento facial progresivo con validación de calidad en tiempo real y detección de vitalidad (Anti-Spoofing). Desarrollado para operar bajo estrictos estándares de ciberseguridad, privacidad de datos y eficiencia computacional en el borde (Edge Computing).
 
 ## ✨ Características Principales
+* **Anti-Spoofing Biométrico (Liveness Detection):** Implementación de Google MediaPipe para calcular el *Eye Aspect Ratio* (EAR) en tiempo real, monitoreando la fluctuación del parpadeo y bloqueando ataques de suplantación con fotografías estáticas.
+* **Arquitectura Asíncrona (Multithreading):** Separación paralela de la captura I/O de video y la inferencia de la Red Neuronal (CNN) para mantener el rendimiento fluido (>30 FPS) en hardware estándar sin bloqueos en la interfaz.
+* **Reconocimiento con FaceNet:** Extracción de características (embeddings) irreversibles de 128 dimensiones mediante TensorFlow/Keras, comparados a través de Distancia Euclidiana.
+* **Tolerancia al Estrés (O(N)):** Motor de búsqueda optimizado con NumPy, capaz de buscar y validar identidades en una base de datos con más de 10,000 registros en un promedio inferior a 0.60 segundos.
+* **HUD Cibernético:** Interfaz superpuesta (Overlay) generada con OpenCV que muestra en tiempo real telemetría de rendimiento (FPS), datos de vitalidad, distancias matemáticas y estado del sistema.
 
-* ⚡ **Ultra Baja Latencia:** Identificación biométrica en menos de 0.5 segundos.
-* 🧠 **Deep Learning (Facenet):** Uso de redes neuronales convolucionales para extraer topología facial en lugar de almacenar fotografías, maximizando la precisión y la privacidad.
-* 🛡️ **Filtro de Calidad por Varianza Laplaciana:** El sistema rechaza automáticamente rostros borrosos o saturados de luz para mantener la integridad de la base de datos.
-* 🧵 **Arquitectura Multihilo (Threading):** Retroalimentación por voz (Text-to-Speech) asíncrona que no bloquea el hilo principal de procesamiento de video.
-* 🔌 **Tolerancia a Fallos de Red:** Reconexión automática (*Graceful Disconnect*) diseñada para operar con cámaras IP y redes WiFi inestables.
-* 💻 **UI Asíncrona:** Interfaz gráfica oscura construida con `CustomTkinter` para el enrolamiento continuo de usuarios sin detener la ejecución del sistema.
+## 🛠️ Tecnologías y Dependencias
+Para garantizar la estabilidad del sistema y evitar conflictos de compatibilidad de arquitectura cruzada, se requiere el siguiente entorno lógico estricto:
+* Python 3.10
+* TensorFlow == 2.15.0
+* Keras == 2.15.0
+* tf-keras == 2.15.0
+* MediaPipe == 0.10.5
+* DeepFace
+* OpenCV-Python
+* CustomTkinter
 
-## ⚙️ Requisitos y Dependencias
+## 🚀 Instalación y Despliegue
 
-Asegúrate de tener instalado Python 3.8 o superior. Puedes instalar todas las dependencias necesarias ejecutando:
-
-```bash
+1. **Clonar el repositorio:**
+   ```bash
+   git clone [https://github.com/TU_USUARIO/shogun-ai.git](https://github.com/TU_USUARIO/shogun-ai.git)
+   cd shogun-ai
+2. **Crear y activar entorno virtual (Recomendado):**
+python -m venv env
+# En Windows:
+env\Scripts\activate
+3. **Instalar dependencias blindadas:**
 pip install -r requirements.txt
+4. **Generar la Base de Datos de Prueba (Stress Test):
+(Por motivos de seguridad y optimización de almacenamiento en el repositorio, la base de datos no se incluye. Debes generarla localmente).**
+python generador_dummies.py
+5. **Ejecutar el sistema:** 
+python main.py
+🎮 Controles del Sistema
 
-Nota: Shogun AI requiere una cámara web estándar o una cámara IP (compatible con DroidCam/OpenCV) para operar.
+    r : Registrar rostro nuevo (Inicia el protocolo de extracción biométrica. Requiere validación de vitalidad obligatoria).
 
-🚀 Instalación y Uso
+    i : Identificar (Procesa el frame actual a través de la red neuronal).
 
-    1. Clonar el repositorio:
-    git clone [https://github.com/tu-usuario/Shogun_AI.git](https://github.com/tu-usuario/Shogun_AI.git)
-    cd Shogun_AI
-    2. Ejecutar el sistema:
-    python main.py
-    3. Controles en tiempo real:
-    Presiona r : Para registrar un nuevo rostro (requiere validación de calidad).
+    b : Dar de baja (Elimina el vector de un usuario de la base de datos).
 
-    Presiona i : Para identificar un rostro en pantalla.
+    q : Salir (Cierra los hilos de ejecución y apaga la cámara).
 
-    Presiona b: para borrar
-    
-    Presiona q : Para salir y cerrar el sistema de forma segura.
-
-🔒 Ética y Privacidad de Datos
-
-En cumplimiento con las mejores prácticas de ciberseguridad, Shogun AI NO almacena imágenes en crudo de los usuarios en su base de datos principal. El sistema convierte los rostros en representaciones matemáticas (embeddings multidimensionales). Los archivos .pkl que contienen esta información han sido excluidos del control de versiones por seguridad y privacidad.
+**Autor: Daniel Santoyo Arevalo**
