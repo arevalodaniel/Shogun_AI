@@ -2,10 +2,6 @@ import cv2
 import os
 import pickle
 import numpy as np
-import cv2
-import os
-import pickle
-import numpy as np
 import time
 import threading
 import math
@@ -77,19 +73,32 @@ def hilo_captura():
 # Arrancamos el motor de la cámara en segundo plano
 threading.Thread(target=hilo_captura, daemon=True).start()
 
-# --- 5. CARGA DE BASE DE DATOS E IA ---
+# --- 5. CARGA DE BASES DE DATOS E IA ---
 archivo_db = "shogun_db.pkl"
 if os.path.exists(archivo_db):
     with open(archivo_db, "rb") as f: base_de_datos = pickle.load(f)
 else: base_de_datos = {}
 
-# Agregamos este print para que lo veas en la terminal al inicio
+# NUEVO: Lista de intentos inválidos
+archivo_invalidos = "shogun_invalidos.pkl"
+if os.path.exists(archivo_invalidos):
+    with open(archivo_invalidos, "rb") as f: lista_invalidos = pickle.load(f)
+else: lista_invalidos = []
+
+def registrar_invalido(motivo):
+    """Guarda un registro del intento fallido de seguridad"""
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    lista_invalidos.append({"fecha": timestamp, "motivo": motivo})
+    with open(archivo_invalidos, "wb") as f: pickle.dump(lista_invalidos, f)
+    print(f"🚨 [ALERTA DE SEGURIDAD] Guardado en lista de inválidos: {motivo}")
+
 print(f"¡Shogun AI 2.0 Listo! - {len(base_de_datos)} registros cargados.")
+print(f"Auditoría activa: {len(lista_invalidos)} intentos bloqueados registrados.")
 
 print("Calentando FaceNet...")
 try: DeepFace.represent(img_path=np.zeros((224, 224, 3), dtype=np.uint8), model_name="Facenet", enforce_detection=False)
 except: pass
-print("¡Shogun AI 2.0 Listo!")
+print("¡Motor IA cargado en RAM!")
 
 # --- 6. HILO DE INTELIGENCIA ARTIFICIAL (FaceNet) ---
 def procesar_identificacion(rostro):
@@ -193,7 +202,7 @@ while corriendo:
         estado_sistema = "MODO DE BAJAS ACTIVO"
         color_estado = (0, 0, 255)
         dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia)
-        cv2.imshow('Shogun AI', frame) # Actualizamos la pantalla antes de pausar
+        cv2.imshow('Shogun AI', frame) 
         
         dialog = ctk.CTkInputDialog(text="🗑️ ELIMINAR REGISTRO\n\nIngresa el nombre del usuario a borrar:", title="Shogun AI - Bajas")
         nombre_borrar = dialog.get_input()
@@ -234,32 +243,44 @@ while corriendo:
                 estado_sistema = "ALERTA: POSIBLE FOTO"
                 color_estado = (0, 0, 255)
                 hablar("Alerta de seguridad. Signos vitales no detectados.")
+                registrar_invalido("Intento de identificación con foto estática (Anti-Spoofing)")
                 
         # --- [r] REGISTRAR NUEVO ROSTRO ---
         elif tecla == ord('r'):
-            if es_humano_vivo: # ¡No dejamos que registren fotos falsas!
-                estado_sistema = "EXTRAYENDO BIOMETRIA..."
-                color_estado = (255, 255, 0)
-                dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia)
-                cv2.imshow('Shogun AI', frame)
+            if es_humano_vivo: 
+                # NUEVO: Filtro Laplaciano de Varianza (Como dice tu PDF)
+                rostro_gris = gray[y:y+h, x:x+w]
+                varianza_enfoque = cv2.Laplacian(rostro_gris, cv2.CV_64F).var()
                 
-                try:
-                    resultado = DeepFace.represent(img_path=rostro_recortado, model_name="Facenet", enforce_detection=False)
-                    embedding = np.array(resultado[0]["embedding"])
+                if varianza_enfoque < 60.0:
+                    estado_sistema = "RECHAZO: IMAGEN BORROSA"
+                    color_estado = (0, 0, 255)
+                    hablar("Registro denegado. La imagen está demasiado borrosa.")
+                    registrar_invalido(f"Intento de registro borroso (Varianza: {varianza_enfoque:.2f})")
+                else:
+                    estado_sistema = "EXTRAYENDO BIOMETRIA..."
+                    color_estado = (255, 255, 0)
+                    dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia)
+                    cv2.imshow('Shogun AI', frame)
                     
-                    dialog = ctk.CTkInputDialog(text="🧬 BIOMETRÍA REQUERIDA\n\nIngresa el nombre del nuevo rostro:", title="Shogun AI - Altas")
-                    nombre = dialog.get_input()
-                    
-                    if nombre:
-                        base_de_datos[nombre] = embedding
-                        with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
-                        hablar(f"Biometría registrada con éxito. Bienvenido a Shogun AI, {nombre}.")
-                except Exception as e:
-                    print(f"Error en registro: {e}")
+                    try:
+                        resultado = DeepFace.represent(img_path=rostro_recortado, model_name="Facenet", enforce_detection=False)
+                        embedding = np.array(resultado[0]["embedding"])
+                        
+                        dialog = ctk.CTkInputDialog(text="🧬 BIOMETRÍA REQUERIDA\n\nIngresa el nombre del nuevo rostro:", title="Shogun AI - Altas")
+                        nombre = dialog.get_input()
+                        
+                        if nombre:
+                            base_de_datos[nombre] = embedding
+                            with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
+                            hablar(f"Biometría registrada con éxito. Bienvenido a Shogun AI, {nombre}.")
+                    except Exception as e:
+                        print(f"Error en registro: {e}")
             else:
                 estado_sistema = "ALERTA: POSIBLE FOTO"
                 color_estado = (0, 0, 255)
                 hablar("Registro denegado. Se requiere un rostro humano vivo.")
+                registrar_invalido("Intento de registro con foto estática (Anti-Spoofing)")
                 
     dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia)
     cv2.imshow('Shogun AI', frame)
