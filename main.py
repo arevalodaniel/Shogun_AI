@@ -64,13 +64,6 @@ def hilo_captura():
     global frame_global, corriendo
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     
-    # 🛡️ LA MEJORA FINAL: Validar si la cámara existe antes de grabar
-    if not cap.isOpened():
-        print("🚨 ERROR CRÍTICO: Cámara no detectada o bloqueada por otro programa.")
-        print("Cerrando Shogun AI por seguridad...")
-        corriendo = False
-        return
-
     while corriendo:
         ret, frame = cap.read()
         if ret:
