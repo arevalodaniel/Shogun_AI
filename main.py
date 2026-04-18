@@ -216,6 +216,11 @@ def dibujar_esquinas(img, x, y, w, h, color=(0, 255, 0), grosor=2, longitud=20):
     cv2.line(img, (x+w, y+h), (x+w-longitud, y+h), color, grosor)
     cv2.line(img, (x+w, y+h), (x+w, y+h-longitud), color, grosor)
 
+print("Calentando motores de la IA...")
+try: DeepFace.represent(img_path=np.zeros((224, 224, 3), dtype=np.uint8), model_name="Facenet", enforce_detection=False)
+except: pass
+print("¡IA lista y cargada en la RAM!")
+
 # --- 8. CICLO PRINCIPAL ---
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 tiempo_anterior = time.time()
