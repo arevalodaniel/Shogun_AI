@@ -1,19 +1,33 @@
-# --- ENTORNOS VIRTUALES ---
-env/
-venv/
-ENV/
+# ==========================================
+# SHOGUN AI - REGLAS DE SEGURIDAD GIT
+# ==========================================
 
-# --- CACHÉ DE PYTHON ---
+# 1. Secretos y Credenciales (¡NUNCA SUBIR!)
+.env
+
+# 2. Bases de Datos Locales (Contienen biometría y auditorías)
+*.pkl
+shogun_db.pkl
+shogun_invalidos.pkl
+
+# 3. Evidencias Fotográficas y Reportes
+evidencias/
+Reporte_Seguridad_ShogunAI.csv
+
+# 4. Entornos Virtuales de Python (Pesan mucho y cada quien crea el suyo)
+venv/
+env/
+.venv/
+
+# 5. Archivos Temporales y Caché de Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# --- BASES DE DATOS BIOMÉTRICAS ---
-# Ignoramos los archivos pickle por peso y seguridad de los datos
-shogun_db.pkl
-shogun_invalidos.pkl
-
-# --- ARCHIVOS DE SISTEMA ---
+# 6. Archivos del Sistema Operativo (Basura visual)
 .DS_Store
 Thumbs.db
+
+# 7. Configuración de VS Code (Opcional, pero mantiene todo limpio)
+.vscode/
