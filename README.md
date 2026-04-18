@@ -1,54 +1,75 @@
-# 🛡️ Shogun AI v2.0 - Advanced Biometric Recognition System
+# 🛡️ Shogun AI - Advanced Security Dashboard v2.5
 
-Sistema de reconocimiento facial progresivo con validación de calidad en tiempo real y detección de vitalidad (Anti-Spoofing). Desarrollado para operar bajo estrictos estándares de ciberseguridad, privacidad de datos y eficiencia computacional en el borde (Edge Computing).
+![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![OpenCV](https://img.shields.io/badge/OpenCV-Vision-green.svg)
+![DeepFace](https://img.shields.io/badge/DeepFace-AI-orange.svg)
+![FAISS](https://img.shields.io/badge/FAISS-Vector%20DB-red.svg)
+
+**Shogun AI** es un sistema de control de acceso biométrico de alto rendimiento diseñado para entornos corporativos e industriales. Utiliza inteligencia artificial de vanguardia para garantizar la identidad del personal, prevenir ataques de suplantación (spoofing) y mantener un registro auditable de seguridad en tiempo real.
+
+Construido bajo el paradigma de **Edge Computing**, Shogun AI procesa la biometría y almacena las evidencias visuales estrictamente en el hardware local, garantizando la privacidad de los datos, mientras utiliza **IoT** para enviar alertas cifradas a los administradores.
+
+---
 
 ## ✨ Características Principales
-* **Anti-Spoofing Biométrico (Liveness Detection):** Implementación de Google MediaPipe para calcular el *Eye Aspect Ratio* (EAR) en tiempo real, monitoreando la fluctuación del parpadeo y bloqueando ataques de suplantación con fotografías estáticas.
-* **Arquitectura Asíncrona (Multithreading):** Separación paralela de la captura I/O de video y la inferencia de la Red Neuronal (CNN) para mantener el rendimiento fluido (>30 FPS) en hardware estándar sin bloqueos en la interfaz.
-* **Reconocimiento con FaceNet:** Extracción de características (embeddings) irreversibles de 128 dimensiones mediante TensorFlow/Keras, comparados a través de Distancia Euclidiana.
-* **Tolerancia al Estrés (O(N)):** Motor de búsqueda optimizado con NumPy, capaz de buscar y validar identidades en una base de datos con más de 10,000 registros en un promedio inferior a 0.60 segundos.
-* **HUD Cibernético:** Interfaz superpuesta (Overlay) generada con OpenCV que muestra en tiempo real telemetría de rendimiento (FPS), datos de vitalidad, distancias matemáticas y estado del sistema.
 
-## 🛠️ Tecnologías y Dependencias
-Para garantizar la estabilidad del sistema y evitar conflictos de compatibilidad de arquitectura cruzada, se requiere el siguiente entorno lógico estricto:
-* Python 3.10
-* TensorFlow == 2.15.0
-* Keras == 2.15.0
-* tf-keras == 2.15.0
-* MediaPipe == 0.10.5
-* DeepFace
-* OpenCV-Python
-* CustomTkinter
+* **👁️ Identificación Ultrarrápida:** Utiliza el modelo **FaceNet** combinado con **Meta FAISS** para buscar e identificar rostros entre miles de registros en fracciones de segundo.
+* **💓 Motor de Vitalidad (Anti-Spoofing):** Implementa **MediaPipe Face Mesh** para calcular el *Eye Aspect Ratio* (EAR) en tiempo real. Exige un reto de parpadeos dinámico y aleatorio para asegurar que el sujeto es un ser humano vivo y rechazar fotografías o pantallas.
+* **📲 Alertas IoT en Tiempo Real:** Integración con la API de Telegram para notificar al equipo de seguridad de forma instantánea sobre intentos de intrusión o bloqueos del sistema.
+* **📸 Auditoría Visual Edge:** Ante un intento de acceso no autorizado, el sistema captura silenciosamente una fotografía del infractor y la almacena en una bóveda local cifrada (`/evidencias`), cumpliendo con las normativas de privacidad corporativa.
+* **📊 Reportes Ejecutivos:** Generación automatizada de reportes CSV con el historial de accesos denegados para auditorías de Recursos Humanos.
 
-## 🚀 Instalación y Despliegue
+---
+
+## 🛠️ Stack Tecnológico y Arquitectura
+
+* **Core & Lógica:** Python, Multithreading (para mantener FPS estables durante cálculos de IA).
+* **Visión por Computadora:** OpenCV (Detección Haar Cascades, renderizado HUD cibernético).
+* **Deep Learning & Biometría:** DeepFace (FaceNet) para la extracción de embeddings faciales (vectores de 128 dimensiones).
+* **Base de Datos Vectorial:** FAISS (Facebook AI Similarity Search) para escalabilidad masiva.
+* **Liveness Detection:** MediaPipe Face Mesh.
+* **Notificaciones y Red:** `requests` para la API de Telegram.
+* **Seguridad de Credenciales:** `python-dotenv` para protección de secretos de entorno.
+
+---
+
+## ⚙️ Instalación y Configuración
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/TU_USUARIO/shogun-ai.git](https://github.com/TU_USUARIO/shogun-ai.git)
-   cd shogun-ai
-2. **Crear y activar entorno virtual (Recomendado):**
-    python -m venv env
-    # En Windows:
-    env\Scripts\activate
-
-3. **Instalar dependencias blindadas:**
+   git clone [https://github.com/arevalodaniel/shogun_AI.git](https://github.com/arevalodaniel/shogun_AI.git)
+   cd shogun_AI_
+2. **Instalar las dependencias:**
+Se recomienda usar un entorno virtual (venv).
     pip install -r requirements.txt
-
-4. **Generar la Base de Datos de Prueba (Stress Test):
-    (Por motivos de seguridad y optimización de almacenamiento en el repositorio, la base de datos no se incluye. Debes generarla localmente).**
-    python generador_dummies.py
-
-5. **Ejecutar el sistema:** 
+3. **Configurar Variables de Entorno (Seguridad):**
+Para habilitar las alertas de Telegram, crea un archivo .env en la raíz del proyecto y agrega tus credenciales. (Nota: Este archivo está ignorado en git por seguridad).
+    TELEGRAM_TOKEN=tu_token_de_bot_aqui
+    TELEGRAM_CHAT_ID=tu_chat_id_aqui
+4. **Ejecutar el sistema:**
     python main.py
+🎮 Controles del Sistema (Dashboard Integrado)
 
-🎮 Controles del Sistema
+El sistema se opera directamente desde la interfaz de cámara mediante comandos de teclado físicos para garantizar una respuesta inmediata en terminales de seguridad:
 
-    r : Registrar rostro nuevo (Inicia el protocolo de extracción biométrica. Requiere validación de vitalidad obligatoria).
+    [ i ] - Iniciar Reto de Acceso: Activa el detector de vitalidad y solicita un número aleatorio de parpadeos antes de procesar la biometría.
 
-    i : Identificar (Procesa el frame actual a través de la red neuronal).
+    [ r ] - Registrar Nuevo Usuario: Evalúa la iluminación y el enfoque (Laplacian Variance). Si la calidad es óptima, extrae el vector biométrico y lo añade a la base de datos local.
 
-    b : Dar de baja (Elimina el vector de un usuario de la base de datos).
+    [ b ] - Dar de Baja: Elimina el registro biométrico de un usuario específico de la base de datos de FAISS.
 
-    q : Salir (Cierra los hilos de ejecución y apaga la cámara).
+    [ e ] - Exportar Reporte: Compila el log de intrusiones y genera el archivo Reporte_Seguridad_ShogunAI.csv.
 
-**Autor: Daniel Santoyo Arevalo**
+    [ q ] - Apagar Sistema: Cierra los hilos de procesamiento y apaga la cámara de forma segura.
+
+🔒 Privacidad y Ética de Datos
+
+Shogun AI fue diseñado con la filosofía Privacy by Design:
+
+    No se almacenan fotografías de los usuarios legítimos (solo representaciones matemáticas unidireccionales de sus rostros).
+
+    Las evidencias fotográficas de atacantes jamás abandonan la red local, evitando fugas de información a través de APIs de terceros.
+
+    Todas las claves de API se gestionan mediante variables de entorno exclusivas del servidor host.
+
+Desarrollado por Daniel Santoyo Arevalo. 🚀
