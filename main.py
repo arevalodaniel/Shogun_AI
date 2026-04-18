@@ -13,11 +13,11 @@ import faiss
 import random
 import winsound
 import csv
-import requests # Necesaria para las alertas de Telegram
+import requests
 from dotenv import load_dotenv
 
+# Cargamos secretos desde el .env (CERO HARDCODEO)
 load_dotenv()
-
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -27,14 +27,13 @@ ctk.set_default_color_theme("green")
 app = ctk.CTk()
 app.withdraw()
 
-# Carpeta para las fotos de los intrusos
 if not os.path.exists("evidencias"):
     os.makedirs("evidencias")
 
 def enviar_alerta_telegram(motivo):
     """Envía una alerta en tiempo real al administrador por Telegram"""
     def tarea_enviar():
-        if TELEGRAM_TOKEN == "PEGA_AQUÍ_TU_API_TOKEN": return
+        if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return # Seguro anti-crasheo
         fecha_hora = time.strftime("%Y-%m-%d %H:%M:%S")
         mensaje = (
             f"🚨 *ALERTA DE SEGURIDAD - SHOGUN AI* 🚨\n\n"
@@ -50,7 +49,7 @@ def enviar_alerta_telegram(motivo):
             print("❌ Error de red al enviar a Telegram")
     threading.Thread(target=tarea_enviar, daemon=True).start()
 
-# Configuración de Voz
+# --- CONFIGURACIÓN DE VOZ Y SFX ---
 def hablar(texto):
     def tarea_voz():
         motor = pyttsx3.init()
@@ -59,9 +58,7 @@ def hablar(texto):
         motor.runAndWait()
     threading.Thread(target=tarea_voz, daemon=True).start()
 
-# Efectos de Sonido SFX
-def beep_parpadeo():
-    threading.Thread(target=winsound.Beep, args=(1500, 100), daemon=True).start()
+def beep_parpadeo(): threading.Thread(target=winsound.Beep, args=(1500, 100), daemon=True).start()
 def sonido_exito():
     def play():
         for f in [1200, 1600, 2000]: winsound.Beep(f, 150)
@@ -75,8 +72,7 @@ def sonido_error():
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
 
-def calcular_distancia(p1, p2, w, h):
-    return math.hypot((p2.x - p1.x) * w, (p2.y - p1.y) * h)
+def calcular_distancia(p1, p2, w, h): return math.hypot((p2.x - p1.x) * w, (p2.y - p1.y) * h)
 
 def calcular_ear(rostro_landmarks, w, h):
     try:
@@ -121,12 +117,16 @@ def hilo_captura():
     cap.release()
 threading.Thread(target=hilo_captura, daemon=True).start()
 
-# --- 5. CARGA DE DATOS ---
+# --- 5. CARGA DE DATOS SEGUROS ---
 archivo_db = "shogun_db.pkl"
-base_de_datos = pickle.load(open(archivo_db, "rb")) if os.path.exists(archivo_db) else {}
+base_de_datos = {}
+if os.path.exists(archivo_db):
+    with open(archivo_db, "rb") as f: base_de_datos = pickle.load(f)
 
 archivo_invalidos = "shogun_invalidos.pkl"
-lista_invalidos = pickle.load(open(archivo_invalidos, "rb")) if os.path.exists(archivo_invalidos) else []
+lista_invalidos = []
+if os.path.exists(archivo_invalidos):
+    with open(archivo_invalidos, "rb") as f: lista_invalidos = pickle.load(f)
 
 def registrar_invalido(motivo, imagen_rostro=None):
     timestamp_file = time.strftime("%Y%m%d_%H%M%S")
@@ -134,8 +134,8 @@ def registrar_invalido(motivo, imagen_rostro=None):
     if imagen_rostro is not None and imagen_rostro.size > 0:
         cv2.imwrite(f"evidencias/INTRUSO_{timestamp_file}.jpg", imagen_rostro)
     lista_invalidos.append({"fecha": timestamp_log, "motivo": motivo})
-    pickle.dump(lista_invalidos, open(archivo_invalidos, "wb"))
-    # GATILLO TELEGRAM
+    
+    with open(archivo_invalidos, "wb") as f: pickle.dump(lista_invalidos, f)
     enviar_alerta_telegram(motivo)
 
 def exportar_reporte():
@@ -243,7 +243,7 @@ while corriendo:
         nom_b = dialog.get_input()
         if nom_b and nom_b in base_de_datos:
             del base_de_datos[nom_b]
-            pickle.dump(base_de_datos, open(archivo_db, "wb"))
+            with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
             actualizar_faiss(); hablar(f"Borrado {nom_b}"); sonido_exito()
         estado_sistema = "ESPERANDO BIOMETRIA"
 
@@ -294,7 +294,7 @@ while corriendo:
                     if nom:
                         res = DeepFace.represent(img_path=rostro_compartido, model_name="Facenet", enforce_detection=False, align=False)
                         base_de_datos[nom] = np.array(res[0]["embedding"])
-                        pickle.dump(base_de_datos, open(archivo_db, "wb"))
+                        with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
                         actualizar_faiss(); sonido_exito(); hablar(f"Bienvenido {nom}")
                 else:
                     hablar("Imagen borrosa. Reintenta.")
