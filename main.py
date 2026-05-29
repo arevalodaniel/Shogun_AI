@@ -16,7 +16,6 @@ import csv
 import requests
 from dotenv import load_dotenv
 
-# Cargamos secretos desde el .env (CERO HARDCODEO)
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -31,9 +30,8 @@ if not os.path.exists("evidencias"):
     os.makedirs("evidencias")
 
 def enviar_alerta_telegram(motivo):
-    """Envía una alerta en tiempo real al administrador por Telegram"""
     def tarea_enviar():
-        if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return # Seguro anti-crasheo
+        if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID: return 
         fecha_hora = time.strftime("%Y-%m-%d %H:%M:%S")
         mensaje = (
             f"🚨 *ALERTA DE SEGURIDAD - SHOGUN AI* 🚨\n\n"
@@ -43,13 +41,10 @@ def enviar_alerta_telegram(motivo):
         )
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
-        try:
-            requests.post(url, data=payload, timeout=5)
-        except:
-            print("❌ Error de red al enviar a Telegram")
+        try: requests.post(url, data=payload, timeout=5)
+        except: print("❌ Error de red al enviar a Telegram")
     threading.Thread(target=tarea_enviar, daemon=True).start()
 
-# --- CONFIGURACIÓN DE VOZ Y SFX ---
 def hablar(texto):
     def tarea_voz():
         motor = pyttsx3.init()
@@ -73,7 +68,6 @@ mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True, min_detection_confidence=0.5)
 
 def calcular_distancia(p1, p2, w, h): return math.hypot((p2.x - p1.x) * w, (p2.y - p1.y) * h)
-
 def calcular_ear(rostro_landmarks, w, h):
     try:
         v1_izq = calcular_distancia(rostro_landmarks[159], rostro_landmarks[145], w, h)
@@ -87,9 +81,10 @@ def calcular_ear(rostro_landmarks, w, h):
         return (ear_izq + ear_der) / 2.0
     except: return 0.0
 
-# --- 3. VARIABLES GLOBALES ---
+# --- 3. VARIABLES GLOBALES NUEVAS (MULTI-MODO) ---
 frame_global = None
 corriendo = True
+modo_operacion = "ACCESO" # Puede ser 'ACCESO' o 'CCTV'
 estado_sistema = "ESPERANDO BIOMETRIA"
 color_estado = (0, 255, 255)
 distancia_actual = 0.0
@@ -98,7 +93,6 @@ ear_actual = 0.0
 es_humano_vivo = False
 rostro_compartido = None 
 
-# Variables del Reto
 reto_completado = False
 esperando_reto = False
 contador_parpadeos = 0
@@ -106,7 +100,10 @@ meta_parpadeos = 3
 tiempo_inicio_reto = 0.0
 parpadeo_detectado = False 
 
-# --- 4. HILO DE LA CÁMARA ---
+# Variables Modo CCTV
+datos_cctv = []
+procesando_cctv = False
+
 def hilo_captura():
     global frame_global, corriendo
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -117,7 +114,7 @@ def hilo_captura():
     cap.release()
 threading.Thread(target=hilo_captura, daemon=True).start()
 
-# --- 5. CARGA DE DATOS SEGUROS ---
+# --- 5. CARGA DE DATOS ---
 archivo_db = "shogun_db.pkl"
 base_de_datos = {}
 if os.path.exists(archivo_db):
@@ -134,7 +131,6 @@ def registrar_invalido(motivo, imagen_rostro=None):
     if imagen_rostro is not None and imagen_rostro.size > 0:
         cv2.imwrite(f"evidencias/INTRUSO_{timestamp_file}.jpg", imagen_rostro)
     lista_invalidos.append({"fecha": timestamp_log, "motivo": motivo})
-    
     with open(archivo_invalidos, "wb") as f: pickle.dump(lista_invalidos, f)
     enviar_alerta_telegram(motivo)
 
@@ -146,7 +142,6 @@ def exportar_reporte():
         writer.writerows(lista_invalidos)
     hablar("Reporte ejecutivo generado con éxito.")
 
-# MOTOR FAISS
 index_faiss = None
 nombres_faiss = []
 def actualizar_faiss():
@@ -158,31 +153,47 @@ def actualizar_faiss():
         index_faiss.add(vectores)
 actualizar_faiss()
 
-# --- 6. HILO IA ---
+# --- 6. HILOS DE IA (ACCESO Y CCTV) ---
 def procesar_identificacion(rostro):
     global estado_sistema, color_estado, distancia_actual, tiempo_ia
     inicio = time.time()
     try:
         resultado = DeepFace.represent(img_path=rostro, model_name="Facenet", enforce_detection=False, align=False)
         emb_actual = np.array([resultado[0]["embedding"]]).astype('float32')
-        mejor_dist = float("inf")
-        identidad = "Desconocido"
+        mejor_dist = float("inf"); identidad = "Desconocido"
         if index_faiss is not None:
             dists, idxs = index_faiss.search(emb_actual, 1) 
             mejor_dist = math.sqrt(dists[0][0])
             identidad = nombres_faiss[idxs[0][0]]
-        tiempo_ia = time.time() - inicio
-        distancia_actual = mejor_dist
+        tiempo_ia = time.time() - inicio; distancia_actual = mejor_dist
         if mejor_dist < 10.0:
-            estado_sistema = f"ACCESO: {identidad.upper()}"
-            color_estado = (0, 255, 0)
+            estado_sistema = f"ACCESO: {identidad.upper()}"; color_estado = (0, 255, 0)
             sonido_exito(); hablar(f"Acceso autorizado. Hola {identidad}")
         else:
-            estado_sistema = "ACCESO DENEGADO"
-            color_estado = (0, 0, 255)
+            estado_sistema = "ACCESO DENEGADO"; color_estado = (0, 0, 255)
             sonido_error(); hablar("Acceso denegado"); registrar_invalido("Usuario Desconocido", rostro)
-    except: 
-        estado_sistema = "ERROR IA"
+    except: estado_sistema = "ERROR IA"
+
+def rutina_cctv(frame_copia, caras_detectadas):
+    """Hilo asíncrono para identificar múltiples caras sin congelar el video"""
+    global procesando_cctv, datos_cctv
+    procesando_cctv = True
+    nuevos_datos = []
+    try:
+        for (x, y, w, h) in caras_detectadas:
+            rostro = frame_copia[y:y+h, x:x+w]
+            res = DeepFace.represent(img_path=rostro, model_name="Facenet", enforce_detection=False, align=False)
+            emb = np.array([res[0]["embedding"]]).astype('float32')
+            identidad = "DESCONOCIDO"; color = (0, 0, 255)
+            if index_faiss is not None and len(nombres_faiss) > 0:
+                dists, idxs = index_faiss.search(emb, 1)
+                mejor_dist = math.sqrt(dists[0][0])
+                if mejor_dist < 10.0:
+                    identidad = nombres_faiss[idxs[0][0]].upper(); color = (0, 255, 0)
+            nuevos_datos.append({'caja': (x,y,w,h), 'nombre': identidad, 'color': color})
+    except: pass
+    datos_cctv = nuevos_datos
+    procesando_cctv = False
 
 # --- 7. HUD ---
 def dibujar_hud(img, fps, ear, vivo, estado, color_est, dist, t_ia, cont, meta, esperando, t_restante):
@@ -190,11 +201,12 @@ def dibujar_hud(img, fps, ear, vivo, estado, color_est, dist, t_ia, cont, meta, 
     overlay = img.copy()
     cv2.rectangle(overlay, (0, 0), (300, h), (15, 15, 15), -1)
     cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
-    cv2.putText(img, "SHOGUN AI v2.5", (20, 40), 1, 1.5, (0, 255, 0), 2)
+    cv2.putText(img, "SHOGUN AI v2.6", (20, 40), 1, 1.5, (0, 255, 0), 2)
     cv2.putText(img, f"FPS: {int(fps)}", (20, 75), 1, 1.2, (255, 255, 255), 1)
     color_ear = (0, 255, 0) if vivo else (0, 0, 255)
-    cv2.putText(img, f"EAR: {ear:.2f}", (20, 120), 1, 1.2, color_ear, 1)
-    cv2.putText(img, "VIVO" if vivo else "SPOOF", (20, 150), 1, 1.2, color_ear, 2)
+    if modo_operacion == "ACCESO":
+        cv2.putText(img, f"EAR: {ear:.2f}", (20, 120), 1, 1.2, color_ear, 1)
+        cv2.putText(img, "VIVO" if vivo else "SPOOF", (20, 150), 1, 1.2, color_ear, 2)
     cv2.line(img, (20, 190), (280, 190), (100, 100, 100), 1)
     cv2.putText(img, estado, (20, 260), 1, 1.3, color_est, 2)
     cv2.putText(img, f"Dist: {dist:.2f}", (20, 300), 1, 1.1, (255, 255, 255), 1)
@@ -202,7 +214,7 @@ def dibujar_hud(img, fps, ear, vivo, estado, color_est, dist, t_ia, cont, meta, 
     cv2.putText(img, f"DB: {len(base_de_datos)}", (20, 370), 1, 1.1, (0, 255, 0), 1)
     if esperando:
         cv2.rectangle(img, (320, 20), (620, 100), (0, 165, 255), -1) 
-        cv2.putText(img, f"RETO: {meta} PARPADEOS", (330, 45), 1, 1.1, (255, 255, 255), 2)
+        cv2.putText(img, f"RETO: {meta} PARPADEO", (330, 45), 1, 1.1, (255, 255, 255), 2)
         cv2.putText(img, f"PROGRESO: {cont}/{meta}", (330, 75), 1, 1.1, (255, 255, 255), 1)
         cv2.putText(img, f"{int(t_restante)}s", (550, 75), 1, 1.2, (0, 0, 255) if t_restante < 3 else (255, 255, 255), 2)
 
@@ -216,10 +228,11 @@ def dibujar_esquinas(img, x, y, w, h, color=(0, 255, 0), grosor=2, longitud=20):
     cv2.line(img, (x+w, y+h), (x+w-longitud, y+h), color, grosor)
     cv2.line(img, (x+w, y+h), (x+w, y+h-longitud), color, grosor)
 
-print("Calentando motores de la IA...")
+# --- TRUCO NINJA COLD START ---
+print("🔥 Calentando motores de la IA...")
 try: DeepFace.represent(img_path=np.zeros((224, 224, 3), dtype=np.uint8), model_name="Facenet", enforce_detection=False)
 except: pass
-print("¡IA lista y cargada en la RAM!")
+print("✅ ¡IA lista y cargada en la memoria RAM!")
 
 # --- 8. CICLO PRINCIPAL ---
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -239,72 +252,101 @@ while corriendo:
     if tecla == ord('q'): break
     if tecla == ord('e'): exportar_reporte()
 
+    # CAMBIO DE MODO
+    if tecla == ord('v'):
+        if modo_operacion == "ACCESO":
+            modo_operacion = "CCTV"
+            estado_sistema = "VIGILANCIA MULTI-TARGET"
+            color_estado = (255, 165, 0)
+            hablar("Modo de vigilancia masiva activado.")
+            datos_cctv = [] 
+        else:
+            modo_operacion = "ACCESO"
+            estado_sistema = "ESPERANDO BIOMETRIA"
+            color_estado = (0, 255, 255)
+            hablar("Modo control de acceso activado.")
+
     if tecla == ord('b'):
-        estado_sistema = "MODO BAJAS"
-        color_estado = (0, 0, 255)
+        estado_sistema = "MODO BAJAS"; color_estado = (0, 0, 255)
         dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia, contador_parpadeos, meta_parpadeos, esperando_reto, t_res)
-        cv2.imshow('Shogun AI v2.5', frame) 
-        dialog = ctk.CTkInputDialog(text="Nombre a borrar:", title="Bajas")
-        nom_b = dialog.get_input()
+        cv2.imshow('Shogun AI v2.6', frame) 
+        nom_b = ctk.CTkInputDialog(text="Nombre a borrar:", title="Bajas").get_input()
         if nom_b and nom_b in base_de_datos:
             del base_de_datos[nom_b]
             with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
             actualizar_faiss(); hablar(f"Borrado {nom_b}"); sonido_exito()
         estado_sistema = "ESPERANDO BIOMETRIA"
 
-    resultados_mesh = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    if resultados_mesh.multi_face_landmarks:
-        ear_actual = calcular_ear(resultados_mesh.multi_face_landmarks[0].landmark, w_img, h_img)
-        es_humano_vivo = True if ear_actual > 0.22 else False
-        if esperando_reto:
-            if t_res <= 0:
-                esperando_reto = False; estado_sistema = "TIMEOUT"; color_estado = (0,0,255)
-                sonido_error(); registrar_invalido("Timeout Reto", rostro_compartido)
-            else:
-                if ear_actual < 0.18 and not parpadeo_detectado: parpadeo_detectado = True
-                if ear_actual > 0.22 and parpadeo_detectado:
-                    contador_parpadeos += 1; parpadeo_detectado = False; beep_parpadeo()
-                if contador_parpadeos >= meta_parpadeos:
-                    reto_completado = True; esperando_reto = False
-    else: ear_actual = 0.0; es_humano_vivo = False
-
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(100, 100))
-
-    for (x, y, w, h) in faces:
-        dibujar_esquinas(frame, x, y, w, h)
-        rostro_compartido = frame[y:y+h, x:x+w].copy()
-        
-        if reto_completado:
-            threading.Thread(target=procesar_identificacion, args=(rostro_compartido,), daemon=True).start()
-            reto_completado = False
-
-        if tecla == ord('i'):
-            if es_humano_vivo:
-                meta_parpadeos = random.randint(2, 4); tiempo_inicio_reto = time.time()
-                esperando_reto = True; contador_parpadeos = 0
-                hablar(f"Reto activo. Parpadea {meta_parpadeos} veces")
-            else:
-                estado_sistema = "SPOOF DETECTADO"
-                color_estado = (0,0,255)
-                sonido_error(); registrar_invalido("Ataque Foto", rostro_compartido)
-
-        if tecla == ord('r'):
-            if es_humano_vivo:
-                var = cv2.Laplacian(cv2.cvtColor(rostro_compartido, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var()
-                if var > 60:
-                    dibujar_hud(frame, fps, ear_actual, es_humano_vivo, "EXTRAYENDO...", (255,255,0), 0, 0, 0, 0, False, 0)
-                    cv2.imshow('Shogun AI v2.5', frame)
-                    nom = ctk.CTkInputDialog(text="🧬 BIOMETRÍA\nNombre:", title="Registro").get_input()
-                    if nom:
-                        res = DeepFace.represent(img_path=rostro_compartido, model_name="Facenet", enforce_detection=False, align=False)
-                        base_de_datos[nom] = np.array(res[0]["embedding"])
-                        with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
-                        actualizar_faiss(); sonido_exito(); hablar(f"Bienvenido {nom}")
+    # === RUTINA MODO 1: ACCESO ===
+    if modo_operacion == "ACCESO":
+        resultados_mesh = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        if resultados_mesh.multi_face_landmarks:
+            ear_actual = calcular_ear(resultados_mesh.multi_face_landmarks[0].landmark, w_img, h_img)
+            es_humano_vivo = True if ear_actual > 0.22 else False
+            if esperando_reto:
+                if t_res <= 0:
+                    esperando_reto = False; estado_sistema = "TIMEOUT"; color_estado = (0,0,255)
+                    sonido_error(); registrar_invalido("Timeout Reto", rostro_compartido)
                 else:
-                    hablar("Imagen borrosa. Reintenta.")
+                    if ear_actual < 0.18 and not parpadeo_detectado: parpadeo_detectado = True
+                    if ear_actual > 0.22 and parpadeo_detectado:
+                        contador_parpadeos += 1; parpadeo_detectado = False; beep_parpadeo()
+                    if contador_parpadeos >= meta_parpadeos:
+                        reto_completado = True; esperando_reto = False
+        else: ear_actual = 0.0; es_humano_vivo = False
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(100, 100))
+
+        for (x, y, w, h) in faces:
+            dibujar_esquinas(frame, x, y, w, h)
+            rostro_compartido = frame[y:y+h, x:x+w].copy()
+            
+            if reto_completado:
+                threading.Thread(target=procesar_identificacion, args=(rostro_compartido,), daemon=True).start()
+                reto_completado = False
+
+            if tecla == ord('i'):
+                if es_humano_vivo:
+                    meta_parpadeos = random.randint(2, 4); tiempo_inicio_reto = time.time()
+                    esperando_reto = True; contador_parpadeos = 0
+                    hablar(f"Reto activo. Parpadea {meta_parpadeos} veces")
+                else:
+                    estado_sistema = "SPOOF DETECTADO"; color_estado = (0,0,255)
+                    sonido_error(); registrar_invalido("Ataque Foto", rostro_compartido)
+
+            if tecla == ord('r'):
+                if es_humano_vivo:
+                    var = cv2.Laplacian(cv2.cvtColor(rostro_compartido, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var()
+                    if var > 60:
+                        dibujar_hud(frame, fps, ear_actual, es_humano_vivo, "EXTRAYENDO...", (255,255,0), 0, 0, 0, 0, False, 0)
+                        cv2.imshow('Shogun AI v2.6', frame)
+                        nom = ctk.CTkInputDialog(text="🧬 BIOMETRÍA\nNombre:", title="Registro").get_input()
+                        if nom:
+                            res = DeepFace.represent(img_path=rostro_compartido, model_name="Facenet", enforce_detection=False, align=False)
+                            base_de_datos[nom] = np.array(res[0]["embedding"])
+                            with open(archivo_db, "wb") as f: pickle.dump(base_de_datos, f)
+                            actualizar_faiss(); sonido_exito(); hablar(f"Bienvenido {nom}")
+                    else: hablar("Imagen borrosa. Reintenta.")
+
+    # === RUTINA MODO 2: CCTV MULTI-TARGET ===
+    elif modo_operacion == "CCTV":
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(60, 60)) # Permite detectar caras lejanas
+        
+        for (x, y, w, h) in faces:
+            dibujar_esquinas(frame, x, y, w, h, color=(255, 165, 0)) # Cajas Naranjas en CCTV
+        
+        # Mandar las caras al hilo de fondo para no congelar el video
+        if not procesando_cctv and len(faces) > 0:
+            threading.Thread(target=rutina_cctv, args=(frame.copy(), faces), daemon=True).start()
+
+        # Dibujar los nombres almacenados en caché sobre las personas
+        for dato in datos_cctv:
+            x, y, w, h = dato['caja']; nom = dato['nombre']; col = dato['color']
+            cv2.putText(frame, nom, (x, y - 10), 1, 1.2, col, 2)
 
     dibujar_hud(frame, fps, ear_actual, es_humano_vivo, estado_sistema, color_estado, distancia_actual, tiempo_ia, contador_parpadeos, meta_parpadeos, esperando_reto, t_res)
-    cv2.imshow('Shogun AI v2.5', frame)
+    cv2.imshow('Shogun AI v2.6', frame)
 
 cv2.destroyAllWindows()
