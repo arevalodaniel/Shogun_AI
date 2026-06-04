@@ -140,7 +140,8 @@ Shogun AI fue diseñado con la filosofía Privacy by Design:
     Las evidencias de atacantes jamás abandonan la red local, evitando fugas mediante APIs.
 
     Las claves se gestionan en variables de entorno locales del host.
-👥 Créditos y Licencia[cite: 6]  Desarrollado por: 
-    Daniel Santoyo Arévalo (Ingeniería en Sistemas Digitales, Instituto Irapuato).
+👥 Créditos y Licencia
+    [cite: 6]  
+    Desarrollado por: Daniel Santoyo Arévalo (Ingeniería en Sistemas Digitales, Instituto Irapuato).
     Contacto: arevalodaniel547@gmail.com
     Licencia: Distribuido bajo la Licencia MIT. (Consulte el archivo LICENSE para más información).
