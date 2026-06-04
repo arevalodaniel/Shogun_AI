@@ -28,6 +28,10 @@
 
 ---
 
+## 🎥 Video de Demostración Oficial
+Puedes ver el sistema Shogun AI v2.6 operando en tiempo real, incluyendo pruebas de estrés, casos no preparados y rechazo de accesos no autorizados mediante Liveness Detection, en el siguiente enlace:
+▶️ https://youtu.be/5RskU7CnLf8
+
 ## ✨ Características Principales
 
 * **🔄 Modo Dual (Acceso / CCTV):** Permite cambiar en tiempo real entre una verificación estricta de un solo sujeto o la identificación masiva de múltiples personas en cámara utilizando **Multithreading Asíncrono**.
